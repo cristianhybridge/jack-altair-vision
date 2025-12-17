@@ -1,5 +1,5 @@
 ﻿import { Outlet } from "react-router-dom";
-import { Flex, HStack, Stack } from "@chakra-ui/react";
+import { Flex, Stack } from "@chakra-ui/react";
 import { getToday } from "../utils/GetTodayDate.ts";
 
 export default function MainLayout() {

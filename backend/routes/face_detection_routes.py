@@ -1,4 +1,4 @@
-﻿import os
+import os
 import tempfile
 
 from flask import Blueprint, request, jsonify
@@ -9,18 +9,19 @@ FACES_DIR = ".\\storage\\faces\\"
 face_detection_bp = Blueprint("face-detection", __name__)
 @face_detection_bp.post("/verify/<int:userId>")
 def verify_face(userId):
+    MIN_CONFIDENCE = 80.00
+    
     print(f"userId: {userId}")
-    requesterFace = request.files["sample_face"]
+    requesterFace = request.files["requester-face"]
     db_face_path = os.path.join(FACES_DIR, f"img-{userId}.jpg")
     print(f"db_face_path: {db_face_path}")
-    sample_face_path = os.path.join(FACES_DIR, f"sample_face.jpg")
-    print(f"sample_face_path: {sample_face_path}")
     if not os.path.exists(db_face_path):
         return jsonify({"error": "User face doesn't exist"}), 404
 
     with tempfile.NamedTemporaryFile(delete=False, suffix=".jpg") as temp:
         requesterFace.save(temp.name)
         temp_path = temp.name
+        
 
     try:
         result = DeepFace.verify(
@@ -31,7 +32,21 @@ def verify_face(userId):
             detector_backend="retinaface",
             enforce_detection=True
         )
-        return jsonify(result)
+
+        if result["verified"] and result["confidence"] > MIN_CONFIDENCE:
+            return jsonify({"verified": True}), 200
+        else:
+            return jsonify({
+                "verified": False,
+                "confidence": result.get("confidence"),
+                "error": "Face verification failed"
+            }), 401
+
+    except ValueError as e:
+        return jsonify({
+            "verified": False,
+            "error": str(e)
+        }), 400
 
     finally:
-        print("OK")
+        os.remove(temp_path)
